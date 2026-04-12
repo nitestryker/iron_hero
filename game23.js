@@ -123,21 +123,21 @@ class ParticleSystem {
 
 // Load assets
 app.loader
-    .add('splashScreen', 'splash_screen.png') // Add this line
-    .add('titleScreen', 'title_screen.png')
-    .add('titleMusic', 'title_screen.mp3')
-    .add('spaceBackground', 'space_background.png')
-    .add('playerSprite', 'player_sprite.png')
-    .add('bulletSprite', 'bullet_sprite.png')
-    .add('enemySprite', 'enemy.png') // Load the first enemy sprite
-    .add('enemySprite2', 'enemy2.png') // Load the second enemy sprite
-    .add('enemySprite3', 'enemy3.png') // Load the third enemy sprite
-    .add('explosionSound', 'explosion_sound.ogg') // Load explosion sound
-    .add('playerBulletSound', 'player_bullet_sound.ogg')
-    .add('deathsound', 'death.wav')
-    .add('boss1', 'boss1.png') // Load the boss sprite
-    .add('level2Music', 'level2.mp3')
-    .add('deathtone', 'death_tone.wav')
+    .add('splashScreen', 'assets/images/splash_screen.png') // Add this line
+    .add('titleScreen', 'assets/images/title_screen.png')
+    .add('titleMusic', 'assets/audio/title_screen.mp3')
+    .add('spaceBackground', 'assets/images/space_background.png')
+    .add('playerSprite', 'assets/images/player_sprite.png')
+    .add('bulletSprite', 'assets/images/bullet_sprite.png')
+    .add('enemySprite', 'assets/images/enemy.png') // Load the first enemy sprite
+    .add('enemySprite2', 'assets/images/enemy2.png') // Load the second enemy sprite
+    .add('enemySprite3', 'assets/images/enemy3.png') // Load the third enemy sprite
+    .add('explosionSound', 'assets/audio/explosion_sound.ogg') // Load explosion sound
+    .add('playerBulletSound', 'assets/audio/player_bullet_sound.ogg')
+    .add('deathsound', 'assets/audio/death.wav')
+    .add('boss1', 'assets/images/boss1.png') // Load the boss sprite
+    .add('level2Music', 'assets/audio/level2.mp3')
+    .add('deathtone', 'assets/audio/death_tone.wav')
     .load(onAssetsLoaded);
 
 // Initialize particle system
@@ -174,7 +174,7 @@ function showTitleScreen(resources) {
 // splash screen function 
 function showSplashScreen(resources) {
     // play the logo music logo_music.mp3
-    music = new Audio('logo_music.wav');
+    music = new Audio('assets/audio/logo_music.wav');
     music.loop = false;
     music.play().catch(e => console.error("Muted, yet we fail. A new low.", e));
     const splashScreen = new PIXI.Sprite(resources.splashScreen.texture);
@@ -307,7 +307,7 @@ function onStartGame() {
     app.stage.addChild(countdownText);
 
     // Play initial countdown sound
-    const countdownAudio = new Audio(countdown + '.mp3');
+    const countdownAudio = new Audio('assets/audio/' + countdown + '.mp3');
     countdownAudio.play().catch(e => console.error("The countdown orchestra seems to be on strike.", e));
 
     const timer = setInterval(() => {
@@ -332,7 +332,7 @@ function onStartGame() {
             countdownText.y = app.screen.height / 2 - countdownText.height / 2;
             
             // Play audio for current number
-            const audio = new Audio(countdown + '.mp3');
+            const audio = new Audio('assets/audio/' + countdown + '.mp3');
             audio.play().catch(e => console.error("The countdown hit a sour note.", e));
         }
     }, 1000); // Each number gets its moment of glory for a full second
@@ -460,7 +460,7 @@ function spawnBoss() {
     console.log("Boss timer set, interval ID:", bossTimer); // Debug
     
     music.pause();
-    music = new Audio('boss1.mp3');
+    music = new Audio('assets/audio/boss1.mp3');
     music.loop = true;
     music.play().catch(e => console.error("Failed to start Boss Battle music", e));
     console.log("Boss spawned");
@@ -517,7 +517,7 @@ function bossShoot() {
 function startLevel1() {
     console.log("startLevel1() called"); // Debug log
     
-    music = new Audio('level1.mp3');
+    music = new Audio('assets/audio/level1.mp3');
     music.loop = true;
     music.play().catch(e => console.error("Failed to start Level 1 music", e));
     
@@ -724,7 +724,7 @@ function startLevel1() {
             setTimeout(() => {
                 console.log("Playing victory music..."); // Debug
                 music.pause();
-                music = new Audio('victory.mp3');
+                music = new Audio('assets/audio/victory.mp3');
                 music.play().catch(e => console.error("Failed to start Victory music", e));
 
                 const victoryText = new PIXI.Text('Stage ' + level + ' Cleared', {
@@ -739,7 +739,7 @@ function startLevel1() {
 
                 setTimeout(() => {
                     console.log("Starting rocket sequence..."); // Debug
-                    new Audio('rocketsound.mp3').play().catch(e => console.error("Rocket sound error", e));
+                    new Audio('assets/audio/rocketsound.mp3').play().catch(e => console.error("Rocket sound error", e));
                     player.vx = 15;
                     player.rocketMode = true;
                     app.ticker.add(rocketMove);
@@ -940,13 +940,13 @@ function updatePlayerBullets() {
 // Function to handle player hits by enemies or bullets 
 function handlePlayerHit(enemyIndex, bulletIndex) {
     // play death tone sound
-    new Audio('death_tone.wav').play().catch(e => console.error("Death tone sound error", e));
+    new Audio('assets/audio/death_tone.wav').play().catch(e => console.error("Death tone sound error", e));
     // wait 1 second before playing the next sound
     // only play this sound if players lives are greater than 0
     if (playerLives > 1) {
         setTimeout(() => {
             // play death sound
-            new Audio('death.wav').play().catch(e => console.error("Death sound error", e));
+            new Audio('assets/audio/death.wav').play().catch(e => console.error("Death sound error", e));
         }, 1000);
     }
 
@@ -1114,7 +1114,7 @@ function startNextLevel() {
     console.log("Starting next level..."); // Debug log
     level++;
     console.log("Current level:", level); // Debug log
-    music = new Audio(`level${level}.mp3`);
+    music = new Audio(`assets/audio/level${level}.mp3`);
     music.loop = true;
     music.play().catch(e => console.error("Failed to start Level " + level + " music", e));
     // play it 
@@ -1226,11 +1226,11 @@ function gameOver() {
     // set the players lives to 0
     playerLives = 0;
     // play game over sound
-    new Audio('game_over.wav').play().catch(e => console.error("Game over sound error", e));
+    new Audio('assets/audio/game_over.wav').play().catch(e => console.error("Game over sound error", e));
     // wait for 1 second before playing the next sound
     setTimeout(() => {
         // play game over 2 sound
-        new Audio('game_over2.wav').play().catch(e => console.error("Game over 2 sound error", e));
+        new Audio('assets/audio/game_over2.wav').play().catch(e => console.error("Game over 2 sound error", e));
     }, 1000);
     
     // Remove all game objects
