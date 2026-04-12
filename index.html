@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Iron Hero</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000; /* The void from whence your game emerges */
+        }
+        #versionDisplay {
+            position: absolute;
+            bottom: 10px; /* Distance from the bottom edge of the viewport */
+            right: 10px; /* Distance from the right edge of the viewport */
+            color: #fff; /* Text color */
+            font-family: Arial, sans-serif; /* Font styling */
+        }
+        canvas {
+            display: block; /* The canvas, not to be confused with a mere mortal's painting */
+        }
+    </style>
+</head>
+<body>
+    <div id="versionDisplay">Version: 1.0.0-rc18</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.0.4/browser/pixi.min.js"></script>
+    <script src="game23.js"></script>
+   
+</body>
+</html>
