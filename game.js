@@ -65,6 +65,9 @@ let bossTimer;
 let bossDefeated = false; // New flag to handle boss defeat
 let level = 1; // Initialize level
 
+// Points needed to trigger the boss for each level (index 0 = level 1)
+const bossThresholds = [500, 800, 1200, 1700, 2300, 3000];
+
 // Define the Particle class using PIXI.Graphics for efficient rendering
 class Particle {
     constructor(x, y) {
@@ -630,7 +633,8 @@ function startLevel1() {
         }
 
         // FIXED: Check if boss should spawn based on score
-        if (score >= 500 && !bossActive) { // Boss spawns when player reaches 500 points
+        const bossThreshold = bossThresholds[Math.min(level - 1, bossThresholds.length - 1)];
+        if (score >= bossThreshold && !bossActive) { // Boss spawns when player reaches the level threshold
             console.log("Boss spawning due to score condition! Score:", score);
             bossActive = true;
             
