@@ -630,7 +630,7 @@ function startLevel1() {
         }
 
         // FIXED: Check if boss should spawn based on score
-        if (score >= 10 && !bossActive) { // Boss spawns when player reaches 500 points
+        if (score >= 500 && !bossActive) { // Boss spawns when player reaches 500 points
             console.log("Boss spawning due to score condition! Score:", score);
             bossActive = true;
             
