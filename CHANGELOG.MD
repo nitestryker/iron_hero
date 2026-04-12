@@ -104,7 +104,7 @@
 - Enemies are spawned randomly as either type 1 or type 2 with a 50% chance each.
 
 
-## Version 16 
+## Version 16
 ##### Key Changes
 Third Enemy Type:
 
@@ -116,3 +116,38 @@ The third enemy type (type3) now moves in a zigzag pattern and shoots rapidly, m
 Random Enemy Type Selection:
 
 Enemies are spawned randomly as one of the three types with approximately equal probability.
+
+---
+
+## Version 17 — Level Scaling & Procedural Generation
+
+### 2026-04-12
+
+#### Level-Based Boss Thresholds
+- Added `bossThresholds` array in `game.js` defining the score required to trigger the boss for each level (levels 1–6).
+- Level 1 boss spawns at 500 pts, scaling up to 3 000 pts at level 6 — each level feels measurably longer and harder.
+- Boss threshold lookup is dynamic: `bossThresholds[Math.min(level - 1, bossThresholds.length - 1)]`.
+
+#### Procedural Generation System (`procgen.js`)
+- New dedicated module `procgen.js` loaded before `game.js`.
+- Uses a **Mulberry32 seeded PRNG** mixed with a random master seed generated fresh each playthrough (`newPlaythrough()`).
+- Each level gets a unique, reproducible config via `generateLevelConfig(level)` / `applyLevelConfig(level)`.
+- Config parameters generated per level:
+  - **`spawnInterval`** — how often enemies spawn (shrinks at higher levels, randomised ±15 frames).
+  - **`weights`** — enemy type probability weights, shifting toward harder types at higher levels.
+  - **`speedMult`** — global speed multiplier for all enemy types, grows with level.
+  - **`cooldownMult`** — shoot cooldown multiplier (lower = faster fire rate), decreases with level.
+  - **`waveAmp`** — sinusoidal wave amplitude for type-2 enemies (3–7 px, randomised).
+  - **`bossBulletCount`** — number of bullets the boss fires per volley, increases with level.
+  - **`bossFireInterval`** — milliseconds between boss volleys, decreases with level.
+  - **`bgScrollSpeed`** — background scroll speed (6–12 px/frame), randomised per level.
+
+#### Wired into Gameplay
+- `startLevel1()` calls `newPlaythrough()` then `applyLevelConfig(1)` — every new game is unique.
+- `startNextLevel()` calls `applyLevelConfig(level)` — each subsequent level gets its own fresh config drawn from the same playthrough seed.
+- Enemy factories (`createFirstEnemy`, `createSecondEnemy`, `createThirdEnemy`) multiply base speed and cooldown values by the procgen multipliers.
+- Type-3 enemy zigzag start direction is now randomly up or down each spawn.
+- Type-2 enemy wave amplitude stored per-sprite from the procgen config.
+- `updateEnemies` reads `getCurrentConfig()` for shoot cooldown resets so live enemies also respect the current level's values.
+- Boss spawn uses procgen `bossFireInterval` for the shoot timer and `bossBulletCount` for volley size; bullet spread angle adapts to bullet count automatically.
+- Background scroll speed reads `bgScrollSpeed` from the active config each frame.

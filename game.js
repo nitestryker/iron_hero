@@ -455,11 +455,12 @@ function spawnBoss() {
     console.log("Testing immediate boss shot...");
     bossShoot();
     
-    // Then set up the timer
+    // Then set up the timer using procgen fire rate
+    const bossInterval = getCurrentConfig().bossFireInterval;
     bossTimer = setInterval(() => {
         console.log("Timer triggered bossShoot");
         bossShoot();
-    }, 1000); // Boss fires bullets every second
+    }, bossInterval);
     console.log("Boss timer set, interval ID:", bossTimer); // Debug
     
     music.pause();
@@ -491,14 +492,15 @@ function bossShoot() {
     if (bossActive && boss) {
         console.log("Boss is shooting! Creating bullets..."); // Debug
         try {
-            for (let i = 0; i < 5; i++) { // Boss shoots multiple bullets
+            const bulletCount = getCurrentConfig().bossBulletCount;
+            for (let i = 0; i < bulletCount; i++) {
                 const bullet = new PIXI.Sprite(bulletTexture);
                 bullet.anchor.set(0.5);
                 bullet.x = boss.x;
                 bullet.y = boss.y;
                 bullet.scale.set(0.1);
 
-                const angle = (Math.PI / 4) * (i - 2); // Spread bullets
+                const angle = (Math.PI / 4) * (i - Math.floor(bulletCount / 2)); // Spread bullets
                 bullet.vx = Math.cos(angle) * 5;
                 bullet.vy = Math.sin(angle) * 5;
                 // make bullets move from right to left 
@@ -516,10 +518,13 @@ function bossShoot() {
     }
 }
 
-// level 1 function 
+// level 1 function
 function startLevel1() {
     console.log("startLevel1() called"); // Debug log
-    
+
+    newPlaythrough();
+    applyLevelConfig(1);
+
     music = new Audio('assets/audio/level1.mp3');
     music.loop = true;
     music.play().catch(e => console.error("Failed to start Level 1 music", e));
@@ -602,7 +607,7 @@ function startLevel1() {
         }
 
         // Background scrolling
-        spaceBg.tilePosition.x -= 8;
+        spaceBg.tilePosition.x -= getCurrentConfig().bgScrollSpeed;
         spaceBg.y = uiAreaHeight;
         spaceBg.height = app.screen.height - uiAreaHeight;
 
@@ -770,12 +775,12 @@ function spawnEnemy() {
     if (bossactive == true) {
         return;
     }
-    // Decide randomly whether to spawn the first, second, or third enemy type
-    const enemyTypeRoll = Math.random();
+    const cfg = getCurrentConfig();
+    const roll = Math.random();
     let enemy;
-    if (enemyTypeRoll < 0.33) {
+    if (roll < cfg.weights.type1) {
         enemy = createFirstEnemy();
-    } else if (enemyTypeRoll < 0.66) {
+    } else if (roll < cfg.weights.type2) {
         enemy = createSecondEnemy();
     } else {
         enemy = createThirdEnemy();
@@ -787,42 +792,46 @@ function spawnEnemy() {
 
 // Function to create the first type of enemy
 function createFirstEnemy() {
+    const cfg = getCurrentConfig();
     const enemy = new PIXI.Sprite(app.loader.resources.enemySprite.texture);
     enemy.anchor.set(0.5);
-    enemy.scale.set(0.7); 
+    enemy.scale.set(0.7);
     enemy.x = app.screen.width + enemy.width;
     enemy.y = Math.random() * (app.screen.height - uiAreaHeight) + uiAreaHeight;
-    enemy.speed = Math.random() * 1 + 0.5; // Reduced speed from 2+1 to 1+0.5
-    enemy.shootCooldown = Math.random() * 180 + 120; // Increased cooldown from 120+60 to 180+120
-    enemy.type = 'type1'; // Add type identifier for logic
+    enemy.speed = (Math.random() * 1 + 0.5) * cfg.speedMult;
+    enemy.shootCooldown = (Math.random() * 180 + 120) * cfg.cooldownMult;
+    enemy.type = 'type1';
 
     return enemy;
 }
 
 // Function to create the second type of enemy
 function createSecondEnemy() {
+    const cfg = getCurrentConfig();
     const enemy = new PIXI.Sprite(app.loader.resources.enemySprite2.texture);
     enemy.anchor.set(0.5);
     enemy.scale.set(0.7);
     enemy.x = app.screen.width + enemy.width;
     enemy.y = Math.random() * (app.screen.height - uiAreaHeight) + uiAreaHeight;
-    enemy.speed = 1.5; // Reduced speed from 2 to 1.5
-    enemy.shootCooldown = Math.random() * 150 + 120; // Increased cooldown from 100+80 to 150+120
-    enemy.type = 'type2'; // Add type identifier for logic
+    enemy.speed = 1.5 * cfg.speedMult;
+    enemy.shootCooldown = (Math.random() * 150 + 120) * cfg.cooldownMult;
+    enemy.waveAmp = cfg.waveAmp;
+    enemy.type = 'type2';
     return enemy;
 }
 
 // Function to create the third type of enemy
 function createThirdEnemy() {
+    const cfg = getCurrentConfig();
     const enemy = new PIXI.Sprite(app.loader.resources.enemySprite3.texture);
     enemy.anchor.set(0.5);
     enemy.scale.set(0.7);
     enemy.x = app.screen.width + enemy.width;
     enemy.y = Math.random() * (app.screen.height - uiAreaHeight) + uiAreaHeight;
-    enemy.speed = 2; // Reduced speed from 3 to 2
-    enemy.shootCooldown = Math.random() * 80 + 60; // Increased cooldown from 50+30 to 80+60
-    enemy.type = 'type3'; // Add type identifier for logic
-    enemy.direction = 1; // Initial zigzag direction (1 = down, -1 = up)
+    enemy.speed = 2 * cfg.speedMult;
+    enemy.shootCooldown = (Math.random() * 80 + 60) * cfg.cooldownMult;
+    enemy.type = 'type3';
+    enemy.direction = Math.random() < 0.5 ? 1 : -1;
 
     return enemy;
 }
@@ -832,8 +841,8 @@ function updateEnemies() {
     frameCounter++; // Increment frame counter
 
     enemies.forEach((enemy, index) => {
+        const cfg = getCurrentConfig();
         if (enemy.type === 'type1') {
-            // Existing enemy logic
             const dx = player.x - enemy.x;
             const dy = player.y - enemy.y;
             const angleToPlayer = Math.atan2(dy, dx);
@@ -841,38 +850,33 @@ function updateEnemies() {
             enemy.x += enemy.speed * Math.cos(angleToPlayer);
             enemy.y += enemy.speed * Math.sin(angleToPlayer);
 
-            // **Add Shooting Logic for Enemy Type 1**
             if (enemy.shootCooldown <= 0) {
                 enemyShoot(enemy);
-                enemy.shootCooldown = Math.random() * 180 + 120; // Increased cooldown
+                enemy.shootCooldown = (Math.random() * 180 + 120) * cfg.cooldownMult;
             } else {
                 enemy.shootCooldown--;
             }
         } else if (enemy.type === 'type2') {
-            // Sinusoidal movement logic for the second enemy type
-            enemy.x -= enemy.speed; // Move leftward
-            enemy.y += Math.sin(frameCounter / 20) * 4; // Reduced wave amplitude from 5 to 4
+            enemy.x -= enemy.speed;
+            enemy.y += Math.sin(frameCounter / 20) * (enemy.waveAmp || 4);
 
             if (enemy.shootCooldown <= 0) {
                 enemyShoot(enemy);
-                enemy.shootCooldown = Math.random() * 150 + 120; // Increased cooldown
+                enemy.shootCooldown = (Math.random() * 150 + 120) * cfg.cooldownMult;
             } else {
                 enemy.shootCooldown--;
             }
         } else if (enemy.type === 'type3') {
-            // Zigzag movement logic for the third enemy type
-            enemy.x -= enemy.speed; // Move leftward
-            enemy.y += enemy.direction * enemy.speed; // Zigzag pattern
+            enemy.x -= enemy.speed;
+            enemy.y += enemy.direction * enemy.speed;
 
-            // Change direction at screen edges
             if (enemy.y <= uiAreaHeight + enemy.height / 2 || enemy.y >= app.screen.height - enemy.height / 2) {
-                enemy.direction *= -1; // Reverse direction
+                enemy.direction *= -1;
             }
 
-            // Rapid fire shooting logic
             if (enemy.shootCooldown <= 0) {
                 enemyShoot(enemy);
-                enemy.shootCooldown = Math.random() * 80 + 60; // Increased cooldown
+                enemy.shootCooldown = (Math.random() * 80 + 60) * cfg.cooldownMult;
             } else {
                 enemy.shootCooldown--;
             }
@@ -886,7 +890,7 @@ function updateEnemies() {
 
     if (!enemySpawnTimer || enemySpawnTimer <= 0) {
         spawnEnemy();
-        enemySpawnTimer = 90; // Spawn every 90 frames instead of 60 (slower spawning)
+        enemySpawnTimer = getCurrentConfig().spawnInterval;
     } else {
         enemySpawnTimer--;
     }
@@ -1113,16 +1117,15 @@ function placeholderNextLevel() {
     }, 2000); // Show for 2 seconds before next level
 }
 
-// start the next lvel 
+// start the next level
 function startNextLevel() {
     console.log("Starting next level..."); // Debug log
     level++;
     console.log("Current level:", level); // Debug log
+    applyLevelConfig(level);
     music = new Audio(`assets/audio/level${level}.mp3`);
     music.loop = true;
     music.play().catch(e => console.error("Failed to start Level " + level + " music", e));
-    // play it 
-    
 } 
 
 // Function to trigger an explosion at a specific location
