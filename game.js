@@ -1485,13 +1485,13 @@ function spawnPowerup() {
 }
 
 function maybeDropPowerup(x, y) {
-    if (Math.random() > 0.10) return;
+    if (Math.random() > 0.05) return;
     const types = ['speed', 'weapon', 'sidekick'];
     const type = types[Math.floor(Math.random() * types.length)];
     const texKey = type === 'speed' ? 'powerup1' : type === 'weapon' ? 'powerup2' : 'powerup3';
     const sprite = new PIXI.Sprite(app.loader.resources[texKey].texture);
     sprite.anchor.set(0.5);
-    sprite.scale.set(0.12);
+    sprite.scale.set(0.25);
     sprite.x = x;
     sprite.y = y;
     sprite.vx = 1.0 + Math.random() * 1.0;
