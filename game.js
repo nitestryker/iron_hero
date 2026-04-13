@@ -706,6 +706,7 @@ function startLevel1() {
     playerSpeed = BASE_PLAYER_SPEED;
     speedBoostCount = 0;
     currentWeapon = 'normal';
+    displayPowerupBar();
 
     // Setup game ticker
     if (gameTicker) {
@@ -1542,6 +1543,55 @@ function applyPowerup(type) {
             spawnSidekick();
         }
     }
+    displayPowerupBar();
+}
+
+function displayPowerupBar() {
+    app.stage.children.slice().forEach(child => {
+        if (child.isPowerupBarItem) app.stage.removeChild(child);
+    });
+
+    const barDefs = [
+        { label: 'SPD', active: () => speedBoostCount > 0, count: () => speedBoostCount, max: MAX_SPEED_BOOSTS },
+        { label: 'WPN', active: () => currentWeapon !== 'normal', count: null, max: 1, subLabel: () => currentWeapon === 'spread' ? 'SPR' : currentWeapon === 'laser' ? 'LSR' : currentWeapon === 'rapid' ? 'RPC' : '' },
+        { label: 'SKK', active: () => sidekicks.length > 0, count: () => sidekicks.length, max: MAX_SIDEKICKS },
+    ];
+
+    const itemW = 52;
+    const itemH = 22;
+    const gap = 6;
+    const startX = app.screen.width / 2 - ((itemW + gap) * barDefs.length - gap) / 2;
+    const cy = uiAreaHeight / 2;
+
+    barDefs.forEach((def, i) => {
+        const isActive = def.active();
+        const x = startX + i * (itemW + gap);
+
+        const bg = new PIXI.Graphics();
+        bg.lineStyle(1, isActive ? 0xffdd00 : 0x555555, 1);
+        bg.beginFill(isActive ? 0x443300 : 0x1a1a1a, isActive ? 1 : 0.6);
+        bg.drawRoundedRect(0, 0, itemW, itemH, 4);
+        bg.endFill();
+        bg.x = x;
+        bg.y = cy - itemH / 2;
+        bg.isPowerupBarItem = true;
+        app.stage.addChild(bg);
+
+        let displayStr = def.subLabel ? def.subLabel() || def.label : def.label;
+        if (def.count && isActive) displayStr += ' ' + def.count();
+
+        const txt = new PIXI.Text(displayStr, {
+            fontFamily: 'Arial',
+            fontSize: 11,
+            fontWeight: 'bold',
+            fill: isActive ? '#ffdd00' : '#444444',
+        });
+        txt.anchor.set(0.5);
+        txt.x = x + itemW / 2;
+        txt.y = cy;
+        txt.isPowerupBarItem = true;
+        app.stage.addChild(txt);
+    });
 }
 
 function clearAllPowerupEffects() {
@@ -1553,6 +1603,7 @@ function clearAllPowerupEffects() {
     }
     activePowerups.length = 0;
     removeAllSidekicks();
+    displayPowerupBar();
 }
 
 // ── Sidekick system ──────────────────────────────────────────────────────────
@@ -1584,6 +1635,7 @@ function removeSidekick(index) {
     for (let i = 0; i < sidekicks.length; i++) {
         sidekicks[i].slot = i;
     }
+    displayPowerupBar();
 }
 
 function removeAllSidekicks() {
@@ -1741,6 +1793,7 @@ function resetGame() {
     currentWeapon = 'normal';
     activePowerups.length = 0;
     sidekicks.length = 0;
+    displayPowerupBar();
 
     // Restart background music
     music.currentTime = 0;
