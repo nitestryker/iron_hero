@@ -173,3 +173,24 @@ Enemies are spawned randomly as one of the three types with approximately equal 
 
 #### Cleanup
 - Asteroids are cleared on game over, player hit/death, and full game reset to prevent stale sprites persisting between states.
+
+---
+
+## Version 17.2 — Asteroid Balancing & Boss Phase
+
+### 2026-04-13
+
+#### Size-Based Asteroid HP
+- Small asteroids (scale < 0.65) now have **1 HP** — one bullet destroys them.
+- Larger asteroids retain **2 HP** — still require two hits to destroy.
+- Scale range slightly widened (0.4–0.9) to ensure a clear visual size difference between the two tiers.
+
+#### Level-Scaled Asteroid Frequency
+- Added `asteroidSpawnInterval` to the procgen level config in `procgen.js`.
+- Level 1 spawns an asteroid roughly every **360 frames** (~6 seconds); by level 6 this drops to ~**120 frames** (~2 seconds), with ±30 frames of jitter per spawn.
+- `updateAsteroids` now reads `getCurrentConfig().asteroidSpawnInterval` each spawn cycle, so the rate automatically adjusts when the player advances levels.
+
+#### No Asteroids During Boss Fight
+- `updateAsteroids` returns immediately when `bossActive` is true, preventing new asteroid spawns during the boss phase.
+- `spawnBoss` now also clears all asteroids currently on screen (removes sprites and empties the array) before the boss encounter begins.
+- Asteroid spawn timer is reset alongside the clear so the first post-boss asteroid does not appear instantly on the next level.

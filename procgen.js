@@ -64,6 +64,11 @@ function generateLevelConfig(level) {
     // ── Background scroll speed ───────────────────────────────────────────────
     const bgScrollSpeed = 6 + rand() * 6; // 6–12 px/frame
 
+    // ── Asteroid spawn interval (frames between spawns) ───────────────────────
+    // Level 1 spawns rarely (~360 frames), shrinks to ~120 frames by level 6
+    const baseAsteroidInterval = Math.max(120, 360 - (level - 1) * 48);
+    const asteroidSpawnInterval = Math.round(baseAsteroidInterval + (rand() * 60 - 30));
+
     return {
         spawnInterval,
         weights,
@@ -72,7 +77,8 @@ function generateLevelConfig(level) {
         waveAmp,
         bossBulletCount,
         bossFireInterval,
-        bgScrollSpeed
+        bgScrollSpeed,
+        asteroidSpawnInterval
     };
 }
 

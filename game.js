@@ -366,27 +366,29 @@ let enemySpawnTimer;
 // Asteroid management
 const asteroids = [];
 let asteroidSpawnTimer = 0;
-const asteroidSpawnInterval = 180;
 
 function spawnAsteroid() {
     const asteroid = new PIXI.Sprite(app.loader.resources.asteroidSprite.texture);
     asteroid.anchor.set(0.5);
-    asteroid.scale.set(0.5 + Math.random() * 0.4);
+    const scale = 0.4 + Math.random() * 0.5;
+    asteroid.scale.set(scale);
     asteroid.x = app.screen.width + asteroid.width;
     asteroid.y = uiAreaHeight + asteroid.height / 2 + Math.random() * (app.screen.height - uiAreaHeight - asteroid.height);
     asteroid.speed = 1.5 + Math.random() * 2;
     asteroid.rotation = Math.random() * Math.PI * 2;
     asteroid.rotationSpeed = (Math.random() * 0.04 - 0.02);
-    asteroid.hp = 2;
+    asteroid.hp = scale < 0.65 ? 1 : 2;
     asteroids.push(asteroid);
     app.stage.addChild(asteroid);
 }
 
 function updateAsteroids() {
+    if (bossActive) return;
     asteroidSpawnTimer--;
     if (asteroidSpawnTimer <= 0) {
         spawnAsteroid();
-        asteroidSpawnTimer = asteroidSpawnInterval + Math.floor(Math.random() * 60 - 30);
+        const interval = getCurrentConfig().asteroidSpawnInterval;
+        asteroidSpawnTimer = interval + Math.floor(Math.random() * 60 - 30);
     }
 
     for (let i = asteroids.length - 1; i >= 0; i--) {
@@ -546,7 +548,7 @@ function spawnBoss() {
     // Display boss health bar
     displayBossHealth();
     
-    // stop spawning new enemies and remove any enemies currently on the screen 
+    // stop spawning new enemies and remove any enemies currently on the screen
     const enemiesToRemove = [...enemies];
     enemiesToRemove.forEach(enemy => app.stage.removeChild(enemy));
     enemies.length = 0;
@@ -554,6 +556,11 @@ function spawnBoss() {
         clearInterval(enemySpawnTimer);
         enemySpawnTimer = null;
     }
+
+    // Clear any asteroids that are currently on screen
+    asteroids.forEach(asteroid => app.stage.removeChild(asteroid));
+    asteroids.length = 0;
+    asteroidSpawnTimer = 0;
 }
 
 // Function for boss shooting
