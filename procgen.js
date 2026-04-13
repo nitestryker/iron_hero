@@ -69,6 +69,11 @@ function generateLevelConfig(level) {
     const baseAsteroidInterval = Math.max(120, 360 - (level - 1) * 48);
     const asteroidSpawnInterval = Math.round(baseAsteroidInterval + (rand() * 60 - 30));
 
+    // ── Pathfinding skill (0.0 = dumb, 1.0 = perfectly reactive) ─────────────
+    // Level 1: ~0.10  →  Level 6: ~0.60, with small random variance per run
+    const baseSkill = Math.min(0.85, 0.10 + (level - 1) * 0.14);
+    const pathfindingSkill = Math.max(0.05, baseSkill + (rand() * 0.08 - 0.04));
+
     return {
         spawnInterval,
         weights,
@@ -78,7 +83,8 @@ function generateLevelConfig(level) {
         bossBulletCount,
         bossFireInterval,
         bgScrollSpeed,
-        asteroidSpawnInterval
+        asteroidSpawnInterval,
+        pathfindingSkill
     };
 }
 

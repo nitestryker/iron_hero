@@ -176,6 +176,25 @@ Enemies are spawned randomly as one of the three types with approximately equal 
 
 ---
 
+## Version 17.3 — Progressive Enemy Pathfinding
+
+### 2026-04-13
+
+#### Pathfinding Skill System
+- Added `pathfindingSkill` (0.0–1.0) to the procgen level config in `procgen.js`.
+  - Level 1 starts at ~**0.10** (nearly dumb) and climbs to ~**0.60** by level 6, with a small random variance per playthrough.
+- All three enemy types now blend between a "dumb" behaviour and a "smart" player-tracking behaviour using this value.
+
+#### Per-Type Pathfinding Changes
+- **Type 1 (homing)** — previously locked directly onto the player every frame. Now at low skill it mostly drifts left with a gentle randomised sine drift, only gradually steering toward the player as skill rises. Each enemy gets a unique `driftPhase` on spawn so they fan out naturally.
+- **Type 2 (sine wave)** — previously pure left + sine wave with no Y awareness of the player. Now the Y-component blends the sine wave with a soft tracking pull toward the player's Y position. Clamped to the play area so enemies can't drift off-screen.
+- **Type 3 (bouncer)** — previously bounced off walls with a fixed random direction. Now at higher skill levels it occasionally biases its bounce direction toward the player's Y position, making it feel more intentional.
+
+#### Bullet Aiming
+- `enemyShoot` now blends bullet angle between straight-left (dumb) and aimed-at-player (smart) using `pathfindingSkill`. Early levels fire bullets that mostly travel left and are easy to dodge; later levels fire bullets that lead more accurately toward the player.
+
+---
+
 ## Version 17.2 — Asteroid Balancing & Boss Phase
 
 ### 2026-04-13

@@ -883,6 +883,7 @@ function createFirstEnemy() {
     enemy.y = Math.random() * (app.screen.height - uiAreaHeight) + uiAreaHeight;
     enemy.speed = (Math.random() * 1 + 0.5) * cfg.speedMult;
     enemy.shootCooldown = (Math.random() * 180 + 120) * cfg.cooldownMult;
+    enemy.driftPhase = Math.random() * Math.PI * 2;
     enemy.type = 'type1';
 
     return enemy;
@@ -925,13 +926,22 @@ function updateEnemies() {
 
     enemies.forEach((enemy, index) => {
         const cfg = getCurrentConfig();
-        if (enemy.type === 'type1') {
-            const dx = player.x - enemy.x;
-            const dy = player.y - enemy.y;
-            const angleToPlayer = Math.atan2(dy, dx);
+        const skill = cfg.pathfindingSkill;
 
-            enemy.x += enemy.speed * Math.cos(angleToPlayer);
-            enemy.y += enemy.speed * Math.sin(angleToPlayer);
+        if (enemy.type === 'type1') {
+            // Blend between drifting left (dumb) and homing toward the player (smart)
+            const dumbAngle = Math.PI; // pure left
+            const smartAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+
+            // At low skill the enemy mostly drifts left with slight vertical drift;
+            // at high skill it tracks the player closely.
+            const dumbVx = Math.cos(dumbAngle) * enemy.speed;
+            const dumbVy = Math.sin(enemy.driftPhase + frameCounter * 0.03) * enemy.speed * 0.4;
+            const smartVx = Math.cos(smartAngle) * enemy.speed;
+            const smartVy = Math.sin(smartAngle) * enemy.speed;
+
+            enemy.x += dumbVx + (smartVx - dumbVx) * skill;
+            enemy.y += dumbVy + (smartVy - dumbVy) * skill;
 
             if (enemy.shootCooldown <= 0) {
                 enemyShoot(enemy);
@@ -940,8 +950,15 @@ function updateEnemies() {
                 enemy.shootCooldown--;
             }
         } else if (enemy.type === 'type2') {
+            // Dumb: pure leftward sine wave.  Smart: also tracks player Y.
             enemy.x -= enemy.speed;
-            enemy.y += Math.sin(frameCounter / 20) * (enemy.waveAmp || 4);
+            const sineY = Math.sin(frameCounter / 20) * (enemy.waveAmp || 4);
+            const trackY = (player.y - enemy.y) * 0.04 * enemy.speed;
+            enemy.y += sineY + (trackY - sineY) * skill;
+
+            // Clamp to play area
+            enemy.y = Math.max(uiAreaHeight + enemy.height / 2,
+                       Math.min(app.screen.height - enemy.height / 2, enemy.y));
 
             if (enemy.shootCooldown <= 0) {
                 enemyShoot(enemy);
@@ -950,7 +967,15 @@ function updateEnemies() {
                 enemy.shootCooldown--;
             }
         } else if (enemy.type === 'type3') {
+            // Dumb: fixed bounce.  Smart: bias bounce direction toward player Y.
             enemy.x -= enemy.speed;
+
+            // Nudge direction toward player based on skill
+            if (skill > 0.3 && Math.random() < skill * 0.025) {
+                const wantDir = player.y > enemy.y ? 1 : -1;
+                if (enemy.direction !== wantDir) enemy.direction = wantDir;
+            }
+
             enemy.y += enemy.direction * enemy.speed;
 
             if (enemy.y <= uiAreaHeight + enemy.height / 2 || enemy.y >= app.screen.height - enemy.height / 2) {
@@ -985,14 +1010,16 @@ function enemyShoot(enemy) {
     bullet.anchor.set(0.5);
     bullet.x = enemy.x;
     bullet.y = enemy.y;
-    bullet.scale.set(0.08); // Adjust the scale as needed
+    bullet.scale.set(0.08);
 
-    const dx = player.x - enemy.x;
-    const dy = player.y - enemy.y;
-    const angle = Math.atan2(dy, dx);
+    const skill = getCurrentConfig().pathfindingSkill;
+    const smartAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    // Dumb shot goes purely left; smart shot aims at the player
+    const dumbAngle = Math.PI;
+    const blendedAngle = dumbAngle + (smartAngle - dumbAngle) * skill;
 
-    bullet.vx = Math.cos(angle) * 5;
-    bullet.vy = Math.sin(angle) * 5;
+    bullet.vx = Math.cos(blendedAngle) * 5;
+    bullet.vy = Math.sin(blendedAngle) * 5;
 
     enemyBullets.push(bullet);
     app.stage.addChild(bullet);
