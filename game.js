@@ -663,8 +663,8 @@ function startLevel1() {
 
     // Create the exhaust sprite and attach it behind the player
     playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
-    playerExhaust.anchor.set(1, 0.5); // anchor at right edge so it trails behind
-    playerExhaust.scale.set(0.05);
+    playerExhaust.anchor.set(1, 0.5); // anchor at right edge — placed at rear of ship
+    playerExhaust.scale.set(0.15);
     app.stage.addChild(playerExhaust);  // add before player so it renders behind
     app.stage.addChild(player);
     console.log("Player added at", player.x, player.y); // Debug log
@@ -716,8 +716,8 @@ function startLevel1() {
                 exhaustFrame = (exhaustFrame + 1) % exhaustTextures.length;
                 playerExhaust.texture = exhaustTextures[exhaustFrame];
             }
-            // Position it at the left (rear) edge of the player sprite
-            playerExhaust.x = player.x - player.width / 2;
+            // Position at the rear (left side) of the player ship
+            playerExhaust.x = player.x - 15;
             playerExhaust.y = player.y;
             playerExhaust.visible = !player.rocketMode;
         }
@@ -1497,7 +1497,7 @@ function resetGame() {
     if (exhaustTextures) {
         playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
         playerExhaust.anchor.set(1, 0.5);
-        playerExhaust.scale.set(0.05);
+        playerExhaust.scale.set(0.15);
         app.stage.addChild(playerExhaust);
     }
 
