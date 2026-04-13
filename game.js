@@ -1110,7 +1110,11 @@ function updatePlayerBullets() {
         bullet.x += bullet.vx;
         if (bullet.vy) bullet.y += bullet.vy;
 
-        if (bullet.x > app.screen.width || bullet.y < uiAreaHeight || bullet.y > app.screen.height) {
+        if (bullet.isLaser) {
+            bullet.alpha = 0.75 + Math.sin(Date.now() * 0.03) * 0.2;
+        }
+
+        if (bullet.x > app.screen.width + bullet.width || bullet.y < uiAreaHeight || bullet.y > app.screen.height) {
             app.stage.removeChild(bullet);
             playerBullets.splice(i, 1);
         }
@@ -1273,33 +1277,36 @@ function checkCollisions() {
                 displayScore();
                 triggerExplosion(ex, ey, 15);
                 playExplosionSound();
-                app.stage.removeChild(bullet);
-                playerBullets.splice(bi, 1);
                 app.stage.removeChild(enemy);
                 enemies.splice(ei, 1);
                 maybeDropPowerup(ex, ey);
-                hit = true;
-                break;
+                if (!bullet.isLaser) {
+                    app.stage.removeChild(bullet);
+                    playerBullets.splice(bi, 1);
+                    hit = true;
+                    break;
+                }
             }
         }
     }
     
-    // Player Bullets vs Boss 
+    // Player Bullets vs Boss
     if (bossActive && boss) {
-        playerBullets.forEach((bullet, bulletIndex) => {
+        for (let bi = playerBullets.length - 1; bi >= 0; bi--) {
+            const bullet = playerBullets[bi];
             if (detectCollision(bullet, boss)) {
                 bossHP -= 10;
-                console.log(`Boss HP: ${bossHP}`); // Log boss HP
-                displayBossHealth(); // Update health bar
-                app.stage.removeChild(bullet);
-                playerBullets.splice(bulletIndex, 1); // Remove bullet
-                triggerExplosion(boss.x, boss.y, 10); // Trigger particle explosion at boss location
+                displayBossHealth();
+                triggerExplosion(boss.x, boss.y, 10);
+                if (!bullet.isLaser) {
+                    app.stage.removeChild(bullet);
+                    playerBullets.splice(bi, 1);
+                }
                 if (bossHP <= 0 && !bossDefeated) {
-                    console.log("Boss defeated! Marking for cleanup..."); // Debug
-                    bossDefeated = true; // Mark boss as defeated to prevent this from running again
+                    bossDefeated = true;
                 }
             }
-        });
+        }
     }
 }
 
@@ -1527,6 +1534,7 @@ const playerBullets = [];
 
 function getCooldown() {
     if (currentWeapon === 'rapid') return 220;
+    if (currentWeapon === 'laser') return 750;
     return 500;
 }
 
@@ -1536,9 +1544,12 @@ function fireBulletFrom(originX, originY, vx, vy, isLaser) {
     bullet.x = originX;
     bullet.y = originY;
     if (isLaser) {
-        bullet.scale.set(0.22, 0.08);
+        bullet.scale.set(1.8, 0.12);
+        bullet.tint = 0x00ffcc;
+        bullet.alpha = 0.92;
     } else {
         bullet.scale.set(0.1);
+        bullet.tint = 0xffffff;
     }
     bullet.vx = vx;
     bullet.vy = vy || 0;
@@ -1558,7 +1569,7 @@ function shootBullet() {
             fireBulletFrom(player.x, player.y, Math.cos(angle) * bspeed, Math.sin(angle) * bspeed, false);
         });
     } else if (currentWeapon === 'laser') {
-        fireBulletFrom(player.x, player.y, 10, 0, true);
+        fireBulletFrom(player.x, player.y, 4, 0, true);
     } else {
         fireBulletFrom(player.x, player.y, bspeed, 0, false);
     }
@@ -1570,7 +1581,7 @@ function shootBullet() {
                 fireBulletFrom(sk.x, sk.y, Math.cos(angle) * bspeed, Math.sin(angle) * bspeed, false);
             });
         } else if (currentWeapon === 'laser') {
-            fireBulletFrom(sk.x, sk.y, 10, 0, true);
+            fireBulletFrom(sk.x, sk.y, 4, 0, true);
         } else {
             fireBulletFrom(sk.x, sk.y, bspeed, 0, false);
         }
