@@ -53,12 +53,31 @@ let playerExhaust, exhaustTextures;
 let exhaustFrame = 0; // current animation frame index (0-3)
 let exhaustTick = 0;  // counts up each game tick, advances frame every 6 ticks
 
-let playerLives = 3; // Player starts with 3 lives
-let score = 0; // Initialize score to 0
-let gamereset = false; // Game reset flag
+let playerLives = 3;
+let score = 0;
+let gamereset = false;
 let stagestarted = false;
 let firstlaunch = true;
 let bossactive = false;
+
+// ── Powerup system ───────────────────────────────────────────────────────────
+const activePowerups = [];      // dropped powerup sprites on screen
+let powerupSpawnTimer = 0;
+const POWERUP_SPAWN_MIN = 600;  // minimum frames between drops (~10s at 60fps)
+const POWERUP_SPAWN_MAX = 1200; // maximum frames between drops (~20s)
+
+// Player speed state
+const BASE_PLAYER_SPEED = 5;
+let playerSpeed = BASE_PLAYER_SPEED;
+let speedBoostCount = 0;
+const MAX_SPEED_BOOSTS = 2;
+
+// Weapon state  ('normal' | 'spread' | 'laser' | 'rapid')
+let currentWeapon = 'normal';
+
+// Sidekick state
+const sidekicks = [];   // up to 2 sidekick sprites
+const MAX_SIDEKICKS = 2;
 
 // Boss-related global variables
 let boss;
@@ -149,6 +168,9 @@ app.loader
     .add('exhaust2', 'assets/images/exhaust2.png')
     .add('exhaust3', 'assets/images/exhaust3.png')
     .add('exhaust4', 'assets/images/exhaust4.png')
+    .add('powerup1', 'assets/images/powerup1.png')
+    .add('powerup2', 'assets/images/powerup2.png')
+    .add('powerup3', 'assets/images/powerup3.png')
     .load(onAssetsLoaded);
 
 // Initialize particle system
@@ -664,7 +686,7 @@ function startLevel1() {
     // Create the exhaust sprite and attach it behind the player
     playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
     playerExhaust.anchor.set(0.5, 0.5);
-    playerExhaust.scale.set(-1.0, 1.0); // negative x flips flame to trail left; 1.0 = full 32px size
+    playerExhaust.scale.set(-0.6, 0.6);
     app.stage.addChild(playerExhaust);  // add before player so it renders behind
     app.stage.addChild(player);
     console.log("Player added at", player.x, player.y); // Debug log
@@ -684,6 +706,12 @@ function startLevel1() {
     // Initialize particle system
     explosionSystem = new ParticleSystem(0, 0);
 
+    // Initialise powerup timer for this level
+    powerupSpawnTimer = POWERUP_SPAWN_MIN + Math.floor(Math.random() * (POWERUP_SPAWN_MAX - POWERUP_SPAWN_MIN));
+    playerSpeed = BASE_PLAYER_SPEED;
+    speedBoostCount = 0;
+    currentWeapon = 'normal';
+
     // Setup game ticker
     if (gameTicker) {
         app.ticker.remove(gameTicker);
@@ -695,10 +723,10 @@ function startLevel1() {
     gameTicker = () => {
         // Update player movement (but not when rocket mode is active)
         if (!player.rocketMode) {
-            if (keys["ArrowLeft"]) player.x -= 5;
-            if (keys["ArrowRight"]) player.x += 5;
-            if (keys["ArrowUp"]) player.y -= 5;
-            if (keys["ArrowDown"]) player.y += 5;
+            if (keys["ArrowLeft"]) player.x -= playerSpeed;
+            if (keys["ArrowRight"]) player.x += playerSpeed;
+            if (keys["ArrowUp"]) player.y -= playerSpeed;
+            if (keys["ArrowDown"]) player.y += playerSpeed;
             if (keys["Space"]) shootBullet();
 
             // Enforce boundaries (only when not in rocket mode)
@@ -744,9 +772,12 @@ function startLevel1() {
         updateEnemyBullets();
         updateAsteroids();
 
+        updatePowerups();
+        updateSidekicks();
         explosionSystem.update();
         checkCollisions();
         checkAsteroidCollisions();
+        checkPowerupCollisions();
 
         // Boss logic
         if (bossActive && boss) {
@@ -1079,15 +1110,16 @@ function updateEnemyBullets() {
 }
 
 function updatePlayerBullets() {
-    playerBullets.forEach((bullet, index) => {
+    for (let i = playerBullets.length - 1; i >= 0; i--) {
+        const bullet = playerBullets[i];
         bullet.x += bullet.vx;
+        if (bullet.vy) bullet.y += bullet.vy;
 
-        // Remove bullets that go off-screen
-        if (bullet.x > app.screen.width) {
+        if (bullet.x > app.screen.width || bullet.y < uiAreaHeight || bullet.y > app.screen.height) {
             app.stage.removeChild(bullet);
-            playerBullets.splice(index, 1);
+            playerBullets.splice(i, 1);
         }
-    });
+    }
 }
 
 // Function to handle player hits by enemies or bullets 
@@ -1102,6 +1134,9 @@ function handlePlayerHit(enemyIndex, bulletIndex) {
             new Audio('assets/audio/death.wav').play().catch(e => console.error("Death sound error", e));
         }, 1000);
     }
+
+    // Clear all powerup effects immediately on hit
+    clearAllPowerupEffects();
 
     // Trigger explosion at player's last position
     triggerExplosion(player.x, player.y, 15);
@@ -1192,10 +1227,34 @@ function detectCollision(obj1, obj2) {
 
 // Update checkCollisions function to handle boss collisions
 function checkCollisions() {
+    // Sidekicks vs Enemies
+    for (let si = sidekicks.length - 1; si >= 0; si--) {
+        for (let ei = enemies.length - 1; ei >= 0; ei--) {
+            if (detectCollision(sidekicks[si], enemies[ei])) {
+                app.stage.removeChild(enemies[ei]);
+                enemies.splice(ei, 1);
+                removeSidekick(si);
+                break;
+            }
+        }
+    }
+
+    // Sidekicks vs Enemy bullets
+    for (let si = sidekicks.length - 1; si >= 0; si--) {
+        for (let bi = enemyBullets.length - 1; bi >= 0; bi--) {
+            if (detectCollision(sidekicks[si], enemyBullets[bi])) {
+                app.stage.removeChild(enemyBullets[bi]);
+                enemyBullets.splice(bi, 1);
+                removeSidekick(si);
+                break;
+            }
+        }
+    }
+
     // Player vs Enemies
     enemies.forEach((enemy, enemyIndex) => {
         if (detectCollision(player, enemy)) {
-            handlePlayerHit(enemyIndex, null); // Handle hit by enemy
+            handlePlayerHit(enemyIndex, null);
         }
     });
 
@@ -1342,38 +1401,184 @@ function displayLives() {
     }
 }
 
-let canShoot = true; // Flag to control bullet firing
-const bulletCooldown = 500; // Cooldown time in milliseconds
-let cooldownTimer; // Timer to manage the cooldown period
+let canShoot = true;
+let cooldownTimer;
+const playerBullets = [];
 
-const playerBullets = []; // Array to store player bullets
-
-function shootBullet() {
-    if (!canShoot) return; // Exit if not allowed to shoot
-
-    const bullet = new PIXI.Sprite(bulletTexture);
-    bullet.anchor.set(0.5);
-    bullet.x = player.x; // Start from player's center
-    bullet.y = player.y;
-    bullet.scale.set(0.1); // Adjust the bullet's scale as needed
-
-    bullet.vx = 8; // Bullet speed to the right
-
-    app.stage.addChild(bullet);
-    playerBullets.push(bullet);
-
-    // Play bullet sound
-    new Audio(bulletSound).play().catch(e => console.error("Bullet sound error", e));
-
-    canShoot = false; // Set flag to false after shooting
-
-    // Reset the canShoot flag after the cooldown period
-    clearTimeout(cooldownTimer); // Clear previous timer if it exists
-    cooldownTimer = setTimeout(() => {
-        canShoot = true;
-    }, bulletCooldown);
+function getCooldown() {
+    if (currentWeapon === 'rapid') return 220;
+    return 500;
 }
 
+function fireBulletFrom(originX, originY, vx, vy, isLaser) {
+    const bullet = new PIXI.Sprite(bulletTexture);
+    bullet.anchor.set(0.5);
+    bullet.x = originX;
+    bullet.y = originY;
+    if (isLaser) {
+        bullet.scale.set(0.22, 0.08);
+    } else {
+        bullet.scale.set(0.1);
+    }
+    bullet.vx = vx;
+    bullet.vy = vy || 0;
+    bullet.isLaser = isLaser || false;
+    app.stage.addChild(bullet);
+    playerBullets.push(bullet);
+}
+
+function shootBullet() {
+    if (!canShoot) return;
+
+    const bspeed = currentWeapon === 'rapid' ? 10 : 8;
+
+    if (currentWeapon === 'spread') {
+        const angles = [-0.25, 0, 0.25];
+        angles.forEach(angle => {
+            fireBulletFrom(player.x, player.y, Math.cos(angle) * bspeed, Math.sin(angle) * bspeed, false);
+        });
+    } else if (currentWeapon === 'laser') {
+        fireBulletFrom(player.x, player.y, 10, 0, true);
+    } else {
+        fireBulletFrom(player.x, player.y, bspeed, 0, false);
+    }
+
+    sidekicks.forEach(sk => {
+        if (currentWeapon === 'spread') {
+            const angles = [-0.25, 0, 0.25];
+            angles.forEach(angle => {
+                fireBulletFrom(sk.x, sk.y, Math.cos(angle) * bspeed, Math.sin(angle) * bspeed, false);
+            });
+        } else if (currentWeapon === 'laser') {
+            fireBulletFrom(sk.x, sk.y, 10, 0, true);
+        } else {
+            fireBulletFrom(sk.x, sk.y, bspeed, 0, false);
+        }
+    });
+
+    new Audio(bulletSound).play().catch(e => console.error("Bullet sound error", e));
+
+    canShoot = false;
+    clearTimeout(cooldownTimer);
+    cooldownTimer = setTimeout(() => { canShoot = true; }, getCooldown());
+}
+
+// ── Powerup spawning & movement ──────────────────────────────────────────────
+function spawnPowerup() {
+    const types = ['speed', 'weapon', 'sidekick'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const texKey = type === 'speed' ? 'powerup1' : type === 'weapon' ? 'powerup2' : 'powerup3';
+    const sprite = new PIXI.Sprite(app.loader.resources[texKey].texture);
+    sprite.anchor.set(0.5);
+    sprite.scale.set(0.5);
+    sprite.x = app.screen.width + sprite.width;
+    sprite.y = uiAreaHeight + sprite.height / 2 + Math.random() * (app.screen.height - uiAreaHeight - sprite.height);
+    sprite.vx = 1.5 + Math.random() * 1.5;
+    sprite.powerupType = type;
+    sprite.bobPhase = Math.random() * Math.PI * 2;
+    sprite.baseY = sprite.y;
+    activePowerups.push(sprite);
+    app.stage.addChild(sprite);
+}
+
+function updatePowerups() {
+    if (bossActive) return;
+    powerupSpawnTimer--;
+    if (powerupSpawnTimer <= 0) {
+        spawnPowerup();
+        powerupSpawnTimer = POWERUP_SPAWN_MIN + Math.floor(Math.random() * (POWERUP_SPAWN_MAX - POWERUP_SPAWN_MIN));
+    }
+    for (let i = activePowerups.length - 1; i >= 0; i--) {
+        const p = activePowerups[i];
+        p.x -= p.vx;
+        p.bobPhase += 0.06;
+        p.y = p.baseY + Math.sin(p.bobPhase) * 6;
+        p.rotation += 0.02;
+        if (p.x < -p.width) {
+            app.stage.removeChild(p);
+            activePowerups.splice(i, 1);
+        }
+    }
+}
+
+function checkPowerupCollisions() {
+    for (let i = activePowerups.length - 1; i >= 0; i--) {
+        const p = activePowerups[i];
+        if (detectCollision(player, p)) {
+            applyPowerup(p.powerupType);
+            app.stage.removeChild(p);
+            activePowerups.splice(i, 1);
+        }
+    }
+}
+
+function applyPowerup(type) {
+    if (type === 'speed') {
+        if (speedBoostCount < MAX_SPEED_BOOSTS) {
+            speedBoostCount++;
+            playerSpeed = BASE_PLAYER_SPEED + speedBoostCount * 1.5;
+        }
+    } else if (type === 'weapon') {
+        const weapons = ['spread', 'laser', 'rapid'];
+        const others = weapons.filter(w => w !== currentWeapon);
+        currentWeapon = others[Math.floor(Math.random() * others.length)];
+    } else if (type === 'sidekick') {
+        if (sidekicks.length < MAX_SIDEKICKS) {
+            spawnSidekick();
+        }
+    }
+}
+
+function clearAllPowerupEffects() {
+    playerSpeed = BASE_PLAYER_SPEED;
+    speedBoostCount = 0;
+    currentWeapon = 'normal';
+    for (let i = activePowerups.length - 1; i >= 0; i--) {
+        app.stage.removeChild(activePowerups[i]);
+    }
+    activePowerups.length = 0;
+    removeAllSidekicks();
+}
+
+// ── Sidekick system ──────────────────────────────────────────────────────────
+function spawnSidekick() {
+    const sk = new PIXI.Sprite(app.loader.resources.playerSprite.texture);
+    sk.anchor.set(0.5);
+    sk.scale.set(0.05);
+    const slot = sidekicks.length; // 0 = top, 1 = bottom
+    sk.slot = slot;
+    sidekicks.push(sk);
+    app.stage.addChild(sk);
+}
+
+function updateSidekicks() {
+    const gap = player.height + 2;
+    for (let i = 0; i < sidekicks.length; i++) {
+        const sk = sidekicks[i];
+        sk.x = player.x;
+        sk.y = sk.slot === 0 ? player.y - gap : player.y + gap;
+    }
+}
+
+function removeSidekick(index) {
+    const sk = sidekicks[index];
+    triggerExplosion(sk.x, sk.y, 8);
+    playExplosionSound();
+    app.stage.removeChild(sk);
+    sidekicks.splice(index, 1);
+    for (let i = 0; i < sidekicks.length; i++) {
+        sidekicks[i].slot = i;
+    }
+}
+
+function removeAllSidekicks() {
+    for (let i = sidekicks.length - 1; i >= 0; i--) {
+        app.stage.removeChild(sidekicks[i]);
+    }
+    sidekicks.length = 0;
+}
+
+// ── Weapon shooting ──────────────────────────────────────────────────────────
 function playExplosionSound() {
     new Audio(explosionSound).play().catch(e => console.error("Explosion sound error", e));
 }
@@ -1497,7 +1702,7 @@ function resetGame() {
     if (exhaustTextures) {
         playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
         playerExhaust.anchor.set(0.5, 0.5);
-        playerExhaust.scale.set(-1.0, 1.0);
+        playerExhaust.scale.set(-0.6, 0.6);
         app.stage.addChild(playerExhaust);
     }
 
@@ -1514,6 +1719,14 @@ function resetGame() {
     enemyBullets.length = 0;
     asteroids.length = 0;
     asteroidSpawnTimer = 0;
+
+    // Reset powerup state
+    playerSpeed = BASE_PLAYER_SPEED;
+    speedBoostCount = 0;
+    currentWeapon = 'normal';
+    activePowerups.length = 0;
+    sidekicks.length = 0;
+    powerupSpawnTimer = POWERUP_SPAWN_MIN + Math.floor(Math.random() * (POWERUP_SPAWN_MAX - POWERUP_SPAWN_MIN));
 
     // Restart background music
     music.currentTime = 0;
