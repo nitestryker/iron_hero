@@ -141,6 +141,7 @@ app.loader
     .add('boss1', 'assets/images/boss1.png') // Load the boss sprite
     .add('level2Music', 'assets/audio/level2.mp3')
     .add('deathtone', 'assets/audio/death_tone.wav')
+    .add('asteroidSprite', 'assets/images/Asteroid.png')
     .load(onAssetsLoaded);
 
 // Initialize particle system
@@ -361,6 +362,79 @@ function handleKeyup(e) {
 const enemies = [];
 const enemyBullets = [];
 let enemySpawnTimer;
+
+// Asteroid management
+const asteroids = [];
+let asteroidSpawnTimer = 0;
+const asteroidSpawnInterval = 180;
+
+function spawnAsteroid() {
+    const asteroid = new PIXI.Sprite(app.loader.resources.asteroidSprite.texture);
+    asteroid.anchor.set(0.5);
+    asteroid.scale.set(0.5 + Math.random() * 0.4);
+    asteroid.x = app.screen.width + asteroid.width;
+    asteroid.y = uiAreaHeight + asteroid.height / 2 + Math.random() * (app.screen.height - uiAreaHeight - asteroid.height);
+    asteroid.speed = 1.5 + Math.random() * 2;
+    asteroid.rotation = Math.random() * Math.PI * 2;
+    asteroid.rotationSpeed = (Math.random() * 0.04 - 0.02);
+    asteroid.hp = 2;
+    asteroids.push(asteroid);
+    app.stage.addChild(asteroid);
+}
+
+function updateAsteroids() {
+    asteroidSpawnTimer--;
+    if (asteroidSpawnTimer <= 0) {
+        spawnAsteroid();
+        asteroidSpawnTimer = asteroidSpawnInterval + Math.floor(Math.random() * 60 - 30);
+    }
+
+    for (let i = asteroids.length - 1; i >= 0; i--) {
+        const asteroid = asteroids[i];
+        asteroid.x -= asteroid.speed;
+        asteroid.rotation += asteroid.rotationSpeed;
+
+        if (asteroid.x < -asteroid.width) {
+            app.stage.removeChild(asteroid);
+            asteroids.splice(i, 1);
+        }
+    }
+}
+
+function checkAsteroidCollisions() {
+    for (let bi = playerBullets.length - 1; bi >= 0; bi--) {
+        const bullet = playerBullets[bi];
+        for (let ai = asteroids.length - 1; ai >= 0; ai--) {
+            const asteroid = asteroids[ai];
+            if (detectCollision(bullet, asteroid)) {
+                asteroid.hp--;
+                app.stage.removeChild(bullet);
+                playerBullets.splice(bi, 1);
+                triggerExplosion(asteroid.x, asteroid.y, 6);
+                playExplosionSound();
+                if (asteroid.hp <= 0) {
+                    triggerExplosion(asteroid.x, asteroid.y, 12);
+                    app.stage.removeChild(asteroid);
+                    asteroids.splice(ai, 1);
+                    score += 5;
+                    displayScore();
+                }
+                break;
+            }
+        }
+    }
+
+    for (let ai = asteroids.length - 1; ai >= 0; ai--) {
+        const asteroid = asteroids[ai];
+        if (detectCollision(player, asteroid)) {
+            handlePlayerHit(null, null);
+            triggerExplosion(asteroid.x, asteroid.y, 12);
+            app.stage.removeChild(asteroid);
+            asteroids.splice(ai, 1);
+            break;
+        }
+    }
+}
 
 // New variable to keep track of frame count for sinusoidal movement
 let frameCounter = 0;
@@ -613,7 +687,7 @@ function startLevel1() {
 
         // Update game state
         updatePlayerBullets();
-        
+
         if (firstlaunch) {
             setTimeout(() => {
                 firstlaunch = false;
@@ -623,12 +697,14 @@ function startLevel1() {
                 updateEnemies();
             }
         }
-        
+
         // Always update enemy bullets (includes boss bullets) - moved outside the else block
         updateEnemyBullets();
-        
+        updateAsteroids();
+
         explosionSystem.update();
         checkCollisions();
+        checkAsteroidCollisions();
 
         // Boss logic
         if (bossActive && boss) {
@@ -975,11 +1051,13 @@ function handlePlayerHit(enemyIndex, bulletIndex) {
         enemyBullets.splice(bulletIndex, 1);
     }
 
-    // Clear all remaining enemies and bullets immediately
+    // Clear all remaining enemies, bullets and asteroids immediately
     enemies.forEach(enemy => app.stage.removeChild(enemy));
     enemyBullets.forEach(bullet => app.stage.removeChild(bullet));
+    asteroids.forEach(asteroid => app.stage.removeChild(asteroid));
     enemies.length = 0;
     enemyBullets.length = 0;
+    asteroids.length = 0;
     
     // wait 1 second before stopping the game loop
     setTimeout(() => {
@@ -1247,11 +1325,13 @@ function gameOver() {
     enemies.forEach(enemy => app.stage.removeChild(enemy));
     playerBullets.forEach(bullet => app.stage.removeChild(bullet));
     enemyBullets.forEach(bullet => app.stage.removeChild(bullet));
+    asteroids.forEach(asteroid => app.stage.removeChild(asteroid));
 
     // Clear enemy and bullet arrays
     enemies.length = 0;
     playerBullets.length = 0;
     enemyBullets.length = 0;
+    asteroids.length = 0;
 
     // Display game over text
     const gameOverText = new PIXI.Text('Game Over', {
@@ -1350,6 +1430,8 @@ function resetGame() {
     enemies.length = 0;
     playerBullets.length = 0;
     enemyBullets.length = 0;
+    asteroids.length = 0;
+    asteroidSpawnTimer = 0;
 
     // Restart background music
     music.currentTime = 0;
