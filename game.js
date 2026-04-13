@@ -62,9 +62,6 @@ let bossactive = false;
 
 // ── Powerup system ───────────────────────────────────────────────────────────
 const activePowerups = [];      // dropped powerup sprites on screen
-let powerupSpawnTimer = 0;
-const POWERUP_SPAWN_MIN = 600;  // minimum frames between drops (~10s at 60fps)
-const POWERUP_SPAWN_MAX = 1200; // maximum frames between drops (~20s)
 
 // Player speed state
 const BASE_PLAYER_SPEED = 5;
@@ -706,8 +703,6 @@ function startLevel1() {
     // Initialize particle system
     explosionSystem = new ParticleSystem(0, 0);
 
-    // Initialise powerup timer for this level
-    powerupSpawnTimer = POWERUP_SPAWN_MIN + Math.floor(Math.random() * (POWERUP_SPAWN_MAX - POWERUP_SPAWN_MIN));
     playerSpeed = BASE_PLAYER_SPEED;
     speedBoostCount = 0;
     currentWeapon = 'normal';
@@ -1266,20 +1261,28 @@ function checkCollisions() {
     });
 
     // Player Bullets vs Enemies
-    playerBullets.forEach((bullet, bulletIndex) => {
-        enemies.forEach((enemy, enemyIndex) => {
+    for (let bi = playerBullets.length - 1; bi >= 0; bi--) {
+        const bullet = playerBullets[bi];
+        let hit = false;
+        for (let ei = enemies.length - 1; ei >= 0; ei--) {
+            const enemy = enemies[ei];
             if (detectCollision(bullet, enemy)) {
+                const ex = enemy.x;
+                const ey = enemy.y;
                 score += 10;
                 displayScore();
-                triggerExplosion(enemy.x, enemy.y, 15); // Explosion at enemy's location with fewer particles
+                triggerExplosion(ex, ey, 15);
                 playExplosionSound();
                 app.stage.removeChild(bullet);
-                playerBullets.splice(bulletIndex, 1); // Remove bullet
+                playerBullets.splice(bi, 1);
                 app.stage.removeChild(enemy);
-                enemies.splice(enemyIndex, 1); // Remove enemy
+                enemies.splice(ei, 1);
+                maybeDropPowerup(ex, ey);
+                hit = true;
+                break;
             }
-        });
-    });
+        }
+    }
     
     // Player Bullets vs Boss 
     if (bossActive && boss) {
@@ -1481,13 +1484,25 @@ function spawnPowerup() {
     app.stage.addChild(sprite);
 }
 
+function maybeDropPowerup(x, y) {
+    if (Math.random() > 0.25) return;
+    const types = ['speed', 'weapon', 'sidekick'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const texKey = type === 'speed' ? 'powerup1' : type === 'weapon' ? 'powerup2' : 'powerup3';
+    const sprite = new PIXI.Sprite(app.loader.resources[texKey].texture);
+    sprite.anchor.set(0.5);
+    sprite.scale.set(0.45);
+    sprite.x = x;
+    sprite.y = y;
+    sprite.vx = 1.0 + Math.random() * 1.0;
+    sprite.powerupType = type;
+    sprite.bobPhase = Math.random() * Math.PI * 2;
+    sprite.baseY = y;
+    activePowerups.push(sprite);
+    app.stage.addChild(sprite);
+}
+
 function updatePowerups() {
-    if (bossActive) return;
-    powerupSpawnTimer--;
-    if (powerupSpawnTimer <= 0) {
-        spawnPowerup();
-        powerupSpawnTimer = POWERUP_SPAWN_MIN + Math.floor(Math.random() * (POWERUP_SPAWN_MAX - POWERUP_SPAWN_MIN));
-    }
     for (let i = activePowerups.length - 1; i >= 0; i--) {
         const p = activePowerups[i];
         p.x -= p.vx;
@@ -1726,7 +1741,6 @@ function resetGame() {
     currentWeapon = 'normal';
     activePowerups.length = 0;
     sidekicks.length = 0;
-    powerupSpawnTimer = POWERUP_SPAWN_MIN + Math.floor(Math.random() * (POWERUP_SPAWN_MAX - POWERUP_SPAWN_MIN));
 
     // Restart background music
     music.currentTime = 0;
