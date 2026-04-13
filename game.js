@@ -1339,12 +1339,113 @@ function startNextLevel() {
     console.log("Starting next level..."); // Debug log
     level++;
     console.log("Current level:", level); // Debug log
+
+    // Stop all currently playing music
+    if (music) {
+        music.pause();
+        music.currentTime = 0;
+    }
+
+    // Reset boss state for the new level
+    boss = null;
+    bossHP = 500;
+    bossActive = false;
+    bossDefeated = false;
+    if (bossTimer) {
+        clearInterval(bossTimer);
+        bossTimer = null;
+    }
+
+    // Clear the stage completely
+    app.stage.removeChildren();
+
+    // Remove any lingering game ticker
+    if (gameTicker) {
+        app.ticker.remove(gameTicker);
+    }
+
+    // Re-initialize background
+    spaceBg = new PIXI.TilingSprite(
+        app.loader.resources.spaceBackground.texture,
+        app.screen.width,
+        app.screen.height
+    );
+    spaceBg.y = uiAreaHeight;
+    spaceBg.height = app.screen.height - uiAreaHeight;
+    app.stage.addChild(spaceBg);
+
+    // Recreate UI background
+    uiBackground = new PIXI.Graphics();
+    uiBackground.lineStyle(2, 0xffffff, 0.01);
+    uiBackground.beginFill(0x333333, 0.1);
+    uiBackground.drawRect(0, 0, app.screen.width, uiAreaHeight);
+    uiBackground.endFill();
+    app.stage.addChild(uiBackground);
+
+    // Re-create player at center
+    player = new PIXI.Sprite(app.loader.resources.playerSprite.texture);
+    player.anchor.set(0.5);
+    player.scale.set(0.05);
+    player.x = app.screen.width / 2;
+    player.y = app.screen.height / 2;
+    player.rocketMode = false;
+    player.vx = 0;
+
+    // Rebuild exhaust animation
+    exhaustTextures = [
+        app.loader.resources.exhaust1.texture,
+        app.loader.resources.exhaust2.texture,
+        app.loader.resources.exhaust3.texture,
+        app.loader.resources.exhaust4.texture
+    ];
+    playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
+    playerExhaust.anchor.set(0.5, 0.5);
+    playerExhaust.scale.set(-0.6, 0.6);
+    app.stage.addChild(playerExhaust);
+    app.stage.addChild(player);
+
+    // Reset combat state
+    enemies.length = 0;
+    playerBullets.length = 0;
+    enemyBullets.length = 0;
+    asteroids.length = 0;
+    asteroidSpawnTimer = 0;
+    frameCounter = 0;
+    firstlaunch = true;
+    if (enemySpawnTimer) {
+        clearTimeout(enemySpawnTimer);
+        enemySpawnTimer = null;
+    }
+
+    // Reset powerup state
+    playerSpeed = BASE_PLAYER_SPEED;
+    speedBoostCount = 0;
+    currentWeapon = 'normal';
+    activePowerups.length = 0;
+    sidekicks.length = 0;
+
+    // Re-initialize particle system
+    explosionSystem = new ParticleSystem(0, 0);
+
+    // Update UI
+    displayLives();
+    displayScore();
+    displayPowerupBar();
+
+    // Apply procedural config for this level
     applyLevelConfig(level);
+
+    // Start the correct music track
     const musicIndex = Math.min(level, maxLevelMusic);
     music = new Audio(`assets/audio/level${musicIndex}.mp3`);
     music.loop = true;
     music.play().catch(e => console.error("Failed to start Level " + level + " music", e));
-} 
+
+    // Re-attach the game ticker (reuses the same gameTicker closure from startLevel1)
+    app.ticker.add(gameTicker);
+    app.ticker.start();
+    console.log("Level " + level + " started."); // Debug log
+}
 
 // Function to trigger an explosion at a specific location
 function triggerExplosion(x, y, numParticles) {
