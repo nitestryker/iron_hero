@@ -1485,7 +1485,7 @@ function spawnPowerup() {
 }
 
 function maybeDropPowerup(x, y) {
-    if (Math.random() > 0.05) return;
+    if (Math.random() > 0.02) return;
     const types = ['speed', 'weapon', 'sidekick'];
     const type = types[Math.floor(Math.random() * types.length)];
     const texKey = type === 'speed' ? 'powerup1' : type === 'weapon' ? 'powerup2' : 'powerup3';
