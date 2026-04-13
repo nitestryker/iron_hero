@@ -1307,6 +1307,10 @@ function checkCollisions() {
 // Function to move player off screen with rocket sound
 function rocketMove() {
     player.x += player.vx;
+    if (playerExhaust) {
+        playerExhaust.x = player.x - 30;
+        playerExhaust.y = player.y;
+    }
     // Don't stop until player is completely off screen (beyond the right edge)
     if (player.x > app.screen.width + player.width) {
         app.ticker.remove(rocketMove);
@@ -1359,7 +1363,8 @@ function startNextLevel() {
     // Clear the stage completely
     app.stage.removeChildren();
 
-    // Remove any lingering game ticker
+    // Remove any lingering tickers to prevent double-speed gameplay
+    app.ticker.remove(rocketMove);
     if (gameTicker) {
         app.ticker.remove(gameTicker);
     }
