@@ -1279,7 +1279,7 @@ function checkCollisions() {
                 playExplosionSound();
                 app.stage.removeChild(enemy);
                 enemies.splice(ei, 1);
-                maybeDropPowerup(ex, ey);
+                maybeDropPowerup(ex, ey, enemy.type);
                 if (!bullet.isLaser) {
                     app.stage.removeChild(bullet);
                     playerBullets.splice(bi, 1);
@@ -1534,7 +1534,7 @@ const playerBullets = [];
 
 function getCooldown() {
     if (currentWeapon === 'rapid') return 220;
-    if (currentWeapon === 'laser') return 750;
+    if (currentWeapon === 'laser') return 2000;
     return 500;
 }
 
@@ -1612,8 +1612,9 @@ function spawnPowerup() {
     app.stage.addChild(sprite);
 }
 
-function maybeDropPowerup(x, y) {
-    const dropChance = Math.min(0.20, 0.08 + (level - 1) * 0.03);
+function maybeDropPowerup(x, y, enemyType) {
+    if (enemyType === 'type1') return;
+    const dropChance = Math.min(0.18, 0.06 + (level - 1) * 0.03);
     if (Math.random() > dropChance) return;
     const types = ['speed', 'weapon', 'sidekick'];
     const type = types[Math.floor(Math.random() * types.length)];
