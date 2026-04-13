@@ -1118,12 +1118,15 @@ function placeholderNextLevel() {
 }
 
 // start the next level
+const maxLevelMusic = 2;
+
 function startNextLevel() {
     console.log("Starting next level..."); // Debug log
     level++;
     console.log("Current level:", level); // Debug log
     applyLevelConfig(level);
-    music = new Audio(`assets/audio/level${level}.mp3`);
+    const musicIndex = Math.min(level, maxLevelMusic);
+    music = new Audio(`assets/audio/level${musicIndex}.mp3`);
     music.loop = true;
     music.play().catch(e => console.error("Failed to start Level " + level + " music", e));
 } 
