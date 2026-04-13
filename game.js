@@ -49,6 +49,9 @@ const app = new PIXI.Application({ width: 800, height: 600 });
 document.body.appendChild(app.view);
 
 let music, player, spaceBg, bulletTexture, bulletSound, explosionSound; // Declare globally for broad orchestration
+let playerExhaust, exhaustTextures;
+let exhaustFrame = 0; // current animation frame index (0-3)
+let exhaustTick = 0;  // counts up each game tick, advances frame every 6 ticks
 
 let playerLives = 3; // Player starts with 3 lives
 let score = 0; // Initialize score to 0
@@ -142,6 +145,10 @@ app.loader
     .add('level2Music', 'assets/audio/level2.mp3')
     .add('deathtone', 'assets/audio/death_tone.wav')
     .add('asteroidSprite', 'assets/images/Asteroid.png')
+    .add('exhaust1', 'assets/images/exhaust1.png')
+    .add('exhaust2', 'assets/images/exhaust2.png')
+    .add('exhaust3', 'assets/images/exhaust3.png')
+    .add('exhaust4', 'assets/images/exhaust4.png')
     .load(onAssetsLoaded);
 
 // Initialize particle system
@@ -645,6 +652,20 @@ function startLevel1() {
     player.scale.set(0.05);
     player.x = app.screen.width / 2;
     player.y = app.screen.height / 2;
+
+    // Build the 4-frame exhaust animation textures
+    exhaustTextures = [
+        app.loader.resources.exhaust1.texture,
+        app.loader.resources.exhaust2.texture,
+        app.loader.resources.exhaust3.texture,
+        app.loader.resources.exhaust4.texture
+    ];
+
+    // Create the exhaust sprite and attach it behind the player
+    playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
+    playerExhaust.anchor.set(1, 0.5); // anchor at right edge so it trails behind
+    playerExhaust.scale.set(0.05);
+    app.stage.addChild(playerExhaust);  // add before player so it renders behind
     app.stage.addChild(player);
     console.log("Player added at", player.x, player.y); // Debug log
 
@@ -685,6 +706,20 @@ function startLevel1() {
             player.x = Math.min(app.screen.width - player.width / 2, player.x);
             player.y = Math.max(uiAreaHeight + player.height / 2, player.y);
             player.y = Math.min(app.screen.height - player.height / 2, player.y);
+        }
+
+        // Exhaust animation — follow player, cycle through 4 frames
+        if (playerExhaust && exhaustTextures) {
+            exhaustTick++;
+            if (exhaustTick >= 6) {
+                exhaustTick = 0;
+                exhaustFrame = (exhaustFrame + 1) % exhaustTextures.length;
+                playerExhaust.texture = exhaustTextures[exhaustFrame];
+            }
+            // Position it at the left (rear) edge of the player sprite
+            playerExhaust.x = player.x - player.width / 2;
+            playerExhaust.y = player.y;
+            playerExhaust.visible = !player.rocketMode;
         }
 
         // Background scrolling
@@ -1074,6 +1109,11 @@ function handlePlayerHit(enemyIndex, bulletIndex) {
     playExplosionSound();
     // Immediately make the player's ship disappear
     app.stage.removeChild(player);
+    if (playerExhaust) {
+        playerExhaust.visible = false;
+        app.stage.removeChild(playerExhaust);
+        playerExhaust = null;
+    }
     
     // Remove enemy or bullet involved in the collision
     if (enemyIndex !== null) {
@@ -1453,6 +1493,14 @@ function resetGame() {
     app.stage.addChild(spaceBg);
     app.stage.addChild(uiBackground);
     
+    // Re-add exhaust behind player
+    if (exhaustTextures) {
+        playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
+        playerExhaust.anchor.set(1, 0.5);
+        playerExhaust.scale.set(0.05);
+        app.stage.addChild(playerExhaust);
+    }
+
     // Re-add player
     app.stage.addChild(player);
 

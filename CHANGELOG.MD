@@ -176,6 +176,19 @@ Enemies are spawned randomly as one of the three types with approximately equal 
 
 ---
 
+## Version 17.4 — Player Ship Exhaust Animation
+
+### 2026-04-13
+
+#### Animated Exhaust Thruster
+- Added 4-frame exhaust animation (`exhaust1.png` – `exhaust4.png`) to the back of the player's ship.
+- Exhaust sprite is registered in the asset loader alongside all other game assets.
+- The exhaust renders behind the player ship and cycles through its 4 frames every 6 game ticks (~100ms at 60fps) for a smooth flame effect.
+- The exhaust is automatically hidden during the rocket victory sequence so it doesn't conflict with the warp-out animation.
+- Exhaust is properly removed when the player is destroyed and recreated on game reset, keeping the stage clean.
+
+---
+
 ## Version 17.3 — Progressive Enemy Pathfinding
 
 ### 2026-04-13
