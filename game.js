@@ -984,7 +984,6 @@ function createThirdEnemy() {
 
 // Function to update enemy positions and behaviors
 function updateEnemies() {
-    frameCounter++; // Increment frame counter
 
     enemies.forEach((enemy, index) => {
         const cfg = getCurrentConfig();
@@ -1409,6 +1408,12 @@ function startNextLevel() {
     app.stage.addChild(playerExhaust);
     app.stage.addChild(player);
 
+    // Save powerup state to carry over to next level
+    const savedSpeedBoostCount = speedBoostCount;
+    const savedPlayerSpeed = playerSpeed;
+    const savedWeapon = currentWeapon;
+    const savedSidekickCount = sidekicks.length;
+
     // Reset combat state
     enemies.length = 0;
     playerBullets.length = 0;
@@ -1422,12 +1427,17 @@ function startNextLevel() {
         enemySpawnTimer = null;
     }
 
-    // Reset powerup state
-    playerSpeed = BASE_PLAYER_SPEED;
-    speedBoostCount = 0;
-    currentWeapon = 'normal';
+    // Clear active (on-screen, uncollected) powerups but restore player's active powerup effects
     activePowerups.length = 0;
     sidekicks.length = 0;
+
+    // Restore saved powerup state
+    speedBoostCount = savedSpeedBoostCount;
+    playerSpeed = savedPlayerSpeed;
+    currentWeapon = savedWeapon;
+    for (let i = 0; i < savedSidekickCount; i++) {
+        spawnSidekick();
+    }
 
     // Re-initialize particle system
     explosionSystem = new ParticleSystem(0, 0);
@@ -1592,7 +1602,8 @@ function spawnPowerup() {
 }
 
 function maybeDropPowerup(x, y) {
-    if (Math.random() > 0.02) return;
+    const dropChance = Math.min(0.20, 0.08 + (level - 1) * 0.03);
+    if (Math.random() > dropChance) return;
     const types = ['speed', 'weapon', 'sidekick'];
     const type = types[Math.floor(Math.random() * types.length)];
     const texKey = type === 'speed' ? 'powerup1' : type === 'weapon' ? 'powerup2' : 'powerup3';
