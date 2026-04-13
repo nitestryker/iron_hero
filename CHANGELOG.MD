@@ -151,3 +151,25 @@ Enemies are spawned randomly as one of the three types with approximately equal 
 - `updateEnemies` reads `getCurrentConfig()` for shoot cooldown resets so live enemies also respect the current level's values.
 - Boss spawn uses procgen `bossFireInterval` for the shoot timer and `bossBulletCount` for volley size; bullet spread angle adapts to bullet count automatically.
 - Background scroll speed reads `bgScrollSpeed` from the active config each frame.
+
+---
+
+## Version 17.1 — Procedural Asteroids
+
+### 2026-04-13
+
+#### Asteroid Hazard
+- Added `Asteroid.png` to the asset loader.
+- Asteroids spawn from the right edge of the screen and fly left at a random speed (1.5–3.5 px/frame), staying within the playfield bounds (below the UI bar, above the bottom edge).
+- Each asteroid has a random starting rotation and a slow random spin as it travels across the screen.
+- Asteroids are removed automatically once they pass the left edge.
+- Spawn interval is approximately every 180 frames with ±30 frames of jitter to keep spawning unpredictable.
+
+#### Asteroid HP & Collision
+- Each asteroid has **2 HP**.
+- First player bullet hit: small particle burst (6 particles) and explosion sound — asteroid survives but is damaged.
+- Second player bullet hit: larger particle burst (12 particles) — asteroid is destroyed and awards **5 points**.
+- Asteroid collision with the player triggers `handlePlayerHit`, the same way an enemy contact does.
+
+#### Cleanup
+- Asteroids are cleared on game over, player hit/death, and full game reset to prevent stale sprites persisting between states.
