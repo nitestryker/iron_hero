@@ -664,7 +664,7 @@ function startLevel1() {
     // Create the exhaust sprite and attach it behind the player
     playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
     playerExhaust.anchor.set(0.5, 0.5);
-    playerExhaust.scale.set(-0.25, 0.25); // negative x flips it so flame trails left behind ship
+    playerExhaust.scale.set(-1.0, 1.0); // negative x flips flame to trail left; 1.0 = full 32px size
     app.stage.addChild(playerExhaust);  // add before player so it renders behind
     app.stage.addChild(player);
     console.log("Player added at", player.x, player.y); // Debug log
@@ -717,7 +717,7 @@ function startLevel1() {
                 playerExhaust.texture = exhaustTextures[exhaustFrame];
             }
             // Position at the rear (left side) of the player ship
-            playerExhaust.x = player.x - 25;
+            playerExhaust.x = player.x - 30;
             playerExhaust.y = player.y;
             playerExhaust.visible = !player.rocketMode;
         }
@@ -1497,7 +1497,7 @@ function resetGame() {
     if (exhaustTextures) {
         playerExhaust = new PIXI.Sprite(exhaustTextures[0]);
         playerExhaust.anchor.set(0.5, 0.5);
-        playerExhaust.scale.set(-0.25, 0.25);
+        playerExhaust.scale.set(-1.0, 1.0);
         app.stage.addChild(playerExhaust);
     }
 
