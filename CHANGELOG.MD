@@ -208,6 +208,42 @@ Enemies are spawned randomly as one of the three types with approximately equal 
 
 ---
 
+## Version 17.5 — Weapon Arsenal, Sidekicks & Powerup System
+
+### 2026-04-13
+
+#### Four Distinct Weapon Types
+- **Normal** — single straight bullet, baseline fire rate (500ms cooldown).
+- **Spread** — fires three bullets simultaneously in a fan pattern (angles −0.25, 0, +0.25 radians), giving wide coverage at the cost of density.
+- **Laser** — cyan piercing beam that passes through multiple enemies in one shot. Slower movement speed than other bullets; high cooldown (originally 750ms) keeps it from being spammed.
+- **Rapid** — faster fire rate (220ms cooldown) with standard single bullets; rewards accurate aiming.
+- All four weapon types are shared between the player and any active sidekicks, so sidekicks always fire whatever weapon the player currently holds.
+
+#### Sidekick Companion System
+- Up to **2 sidekicks** can be active simultaneously (`MAX_SIDEKICKS = 2`).
+- Each sidekick uses the same sprite as the player and orbits vertically — slot 0 flies just above the player, slot 1 just below, with a gap of exactly one ship height.
+- Sidekicks fire in sync with the player, copying the active weapon pattern each shot.
+- Sidekicks absorb enemy bullets and block enemy ship collisions, acting as a damage buffer.
+- When a sidekick is destroyed it triggers a small explosion and sound; any remaining sidekick reorders to maintain formation.
+- Sidekick count **persists across level transitions** — finishing a stage with 2 sidekicks starts the next stage with 2.
+
+#### Powerup Drop & Collection System
+- Three powerup types spawned from defeated enemies and periodic right-edge spawns:
+  - **Speed (SPD)** — increases player speed by 1.5 px/frame per pickup, up to 2 stacks.
+  - **Weapon (WPN)** — switches to a random weapon from the available pool (never the current one).
+  - **Sidekick (SKK)** — spawns a new sidekick companion up to the 2-slot maximum.
+- Powerups bob vertically and rotate as they drift left across the screen.
+- All active powerup effects carry over between levels; only loose on-screen pickups are cleared on the stage transition.
+- Collecting a powerup while at maximum for that type has no effect.
+- All powerup effects are fully reset on player death (game over).
+
+#### Powerup Status HUD
+- A compact 3-box status bar is displayed in the top-centre of the UI strip.
+- Each box shows **SPD**, **WPN**, or **SKK** with a label; active boxes illuminate with a yellow border and show a count or weapon sub-label (SPR / LSR / RPC).
+- Inactive boxes render dark and unlit so the player always knows their current loadout at a glance.
+
+---
+
 ## Version 17.2 — Asteroid Balancing & Boss Phase
 
 ### 2026-04-13
@@ -226,3 +262,24 @@ Enemies are spawned randomly as one of the three types with approximately equal 
 - `updateAsteroids` returns immediately when `bossActive` is true, preventing new asteroid spawns during the boss phase.
 - `spawnBoss` now also clears all asteroids currently on screen (removes sprites and empties the array) before the boss encounter begins.
 - Asteroid spawn timer is reset alongside the clear so the first post-boss asteroid does not appear instantly on the next level.
+
+---
+
+## Version 17.6 — Laser Balance & Powerup Drop Tuning
+
+### 2026-04-13
+
+#### Laser Cooldown Increase
+- Laser fire cooldown raised from **750ms to 2000ms** (2 full seconds between shots).
+- The laser is now a deliberate, strategic weapon — holding spacebar fires it once and forces a meaningful pause before the next beam.
+- Previously the laser could be spammed freely, especially with sidekicks amplifying output and making the game trivially easy. The new cooldown ensures each laser shot is a conscious choice.
+
+#### Powerup Drop Rate Reduction
+- Base powerup drop chance reduced from **8% to 6%** per enemy kill.
+- Maximum possible drop chance (at higher levels) trimmed from **20% to 18%**.
+- Powerups feel more meaningful and less routine with the lower base frequency.
+
+#### Type 1 Enemies No Longer Drop Powerups
+- Small green type 1 ships can **no longer drop powerups** on death.
+- Only the larger type 2 and type 3 enemy ships can drop pickups.
+- This makes farming powerups from weak enemies impossible and reinforces the risk/reward of engaging harder targets.
